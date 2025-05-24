@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  spark-iceberg:
+    image: spark-iceberg
+    container_name: spark-iceberg
+    build: ./spark
+    entrypoint: ['./entrypoint.sh', 'master' ]
+    env_file:
+      - spark/.env
+    volumes:
+      - ./warehouse:/home/iceberg/warehouse
+      - ./notebooks:/home/iceberg/notebooks
+      - ./data:/opt/spark/data
+      - ./spark_apps:/opt/spark/apps
+      - spark-logs:/opt/spark/spark-events
+    ports:
+      - '8888:8888'
+      - '8080:8080'
+      - '10000:10000'
+      - '10001:10001'
+
+
+  spark-worker:
+    image: spark-iceberg
+    container_name: spark-worker
+    entrypoint: [ './entrypoint.sh', 'worker' ]
+    depends_on:
+      - spark-iceberg
+    env_file:
+      - spark/.env
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    volumes:
+      - ./data:/opt/spark/data
+      - ./warehouse:/home/iceberg/warehouse
+      - ./spark_apps:/opt/spark/apps
+      - spark-logs:/opt/spark/spark-events
+    ports:
+      - '8081:8081'
+
+  spark-history-server:
+    container_name: spark-history
+    image: spark-iceberg
+    entrypoint: [ './entrypoint.sh', 'history' ]
+    depends_on:
+      - spark-iceberg
+    env_file:
+      - spark/.env
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    volumes:
+      - spark-logs:/opt/spark/spark-events
+    ports:
+      - '18080:18080'
+
+
+volumes:
+  spark-logs:
