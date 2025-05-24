@@ -48,7 +48,7 @@ services:
       - ./minio/data/:/data
     environment:
       - USER=user
-      - COPY_DIR=false
+      - COPY_DIR=true
       - INPUT_BUCKETS=iceberg-data
     depends_on:
       - minio-s3
