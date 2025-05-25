@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  pg-catalog:
+    image: postgres:15-alpine
+    container_name: pg_catalog
+    networks:
+      iceberg-net:
+    environment:
+      - POSTGRES_USER=iceberg
+      - POSTGRES_PASSWORD=iceberg
+      - POSTGRES_DB=iceberg
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "iceberg" ]
+      interval: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  minio-s3:
+    image: minio/minio
+    container_name: iceberg_s3
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file:
+      - ./minio/.env
+    command: server --console-address ":9001" /data
+    networks:
+      iceberg-net:
+        aliases:
+          - iceberg-data.minio-s3
+    volumes:
+      - minio-s3-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio-s3-init:
+    build: ./minio/
+    networks:
+      iceberg-net:
+    env_file:
+      - ./minio/.env
+    volumes:
+      - ./minio/data/:/data
+    environment:
+      - USER=user
+      - COPY_DIR=true
+      - INPUT_BUCKETS=iceberg-data
+    depends_on:
+      - minio-s3
+    entrypoint: /bin/sh ./entrypoint.sh
+
+
+  spark-iceberg:
+    build:
+      context: ./spark
+      args:
+        SPARK_DEFAULTS_CONF: spark-defaults-minio.conf
+    networks:
+      iceberg-net:
+    depends_on:
+      pg-catalog:
+        condition: service_healthy
+      minio-s3-init:
+        condition: service_completed_successfully
+
+  spark-worker-1:
+    networks:
+      iceberg-net:
+
+  spark-worker-2:
+    networks:
+      iceberg-net:
+
+  spark-worker-3:
+    networks:
+      iceberg-net:
+
+  spark-history-server:
+    networks:
+      iceberg-net:
+      
+  kafka:
+    image: bitnami/kafka:4.0
+    container_name: kafka
+    ports:
+      - '9092:9092'
+      - '9094:9094'
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      iceberg-net:
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - '9090:8080'
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=kraft-demo
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      iceberg-net:
+
+volumes:
+  minio-s3-data:
+  kafka_data:
+
+
+networks:
+  iceberg-net:
