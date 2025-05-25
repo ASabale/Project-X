@@ -68,7 +68,15 @@ services:
       minio-s3-init:
         condition: service_completed_successfully
 
-  spark-worker:
+  spark-worker-1:
+    networks:
+      iceberg-net:
+
+  spark-worker-2:
+    networks:
+      iceberg-net:
+
+  spark-worker-3:
     networks:
       iceberg-net:
 
