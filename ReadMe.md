@@ -115,6 +115,7 @@ The project is organized into clear modules for **EDA**, **Environment Setup**, 
 * [XGBoost Docs](https://xgboost.readthedocs.io/)
 * [LightGBM Docs](https://lightgbm.readthedocs.io/)
 * [Imbalanced-learn Docs](https://imbalanced-learn.org/)
+* [Learning Apache Iceberg: Storing the Data to MinIO S3 (Medium Blog)](https://medium.com/@MarinAgli1/learning-apache-iceberg-storing-the-data-to-minio-s3-56670cef199d)
 * See module READMEs for more links.
 
 ---
