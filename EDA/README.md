@@ -30,7 +30,7 @@ During initial inspection we:
 
 ### Decision
 
-✔️ **Retain rows**. For each feature with a custom missing code we:
+**Retain rows**. For each feature with a custom missing code we:
 
 1. Created an indicator column `feature_missing` (1 if missing, else 0).
 2. Imputed the missing numeric value with the **median** of observed data.
